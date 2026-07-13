@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Tesorería 2035 — Panel de Seguimiento</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<style>
+  :root{
+    --bg: #0F1B2D;
+    --bg-surface: #16253D;
+    --bg-surface-2: #1C2E4A;
+    --line: #2A3B57;
+    --brass: #C9A227;
+    --brass-soft: #E0C465;
+    --teal: #4A9B8E;
+    --steel: #6E8CA0;
+    --clay: #B4694A;
+    --plum: #8C6B90;
+    --text: #EDE8DD;
+    --text-muted: #93A1B4;
+    --text-faint: #5D6C82;
+    --ok: #6FA37E;
+    --warn: #D1A054;
+    --danger: #C1666B;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Sans', sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap{ max-width: 1180px; margin: 0 auto; padding: 48px 28px 80px; }
+
+  /* ---------- HEADER ---------- */
+  header{
+    position: relative;
+    padding: 44px 40px;
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    background: var(--bg-surface);
+    overflow: hidden;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 32px;
+    align-items: center;
+  }
+  .guilloche{
+    position: absolute; inset: 0;
+    opacity: 0.10;
+    pointer-events: none;
+  }
+  .eyebrow{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--brass-soft);
+    margin-bottom: 14px;
+  }
+  h1{
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 34px;
+    letter-spacing: -0.01em;
+    color: var(--text);
+  }
+  header p{
+    margin-top: 10px;
+    color: var(--text-muted);
+    font-size: 14.5px;
+    max-width: 46ch;
+  }
+  .seal{
+    position: relative;
+    width: 148px; height: 148px;
+    border-radius: 50%;
+    border: 1.5px solid var(--brass);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: radial-gradient(circle at 50% 40%, rgba(201,162,39,0.08), transparent 70%);
+    flex-shrink: 0;
+  }
+  .seal::before{
+    content:"";
+    position: absolute; inset: 9px;
+    border-radius: 50%;
+    border: 1px dashed rgba(201,162,39,0.45);
+  }
+  .seal .num{
+    font-family: 'Fraunces', serif;
+    font-size: 40px;
+    font-weight: 600;
+    color: var(--brass-soft);
+    line-height: 1;
+  }
+  .seal .lbl{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9.5px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-top: 6px;
+    text-align: center;
+  }
+
+  /* ---------- ALERT ---------- */
+  .alert{
+    margin-top: 20px;
+    padding: 16px 20px;
+    border: 1px solid rgba(193,102,107,0.4);
+    background: rgba(193,102,107,0.08);
+    border-radius: 4px;
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    font-size: 13.5px;
+  }
+  .alert .tag{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--danger);
+    border: 1px solid rgba(193,102,107,0.5);
+    padding: 2px 7px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+  .alert span.msg{ color: var(--text-muted); }
+
+  /* ---------- KPI STRIP ---------- */
+  .kpis{
+    margin-top: 20px;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .kpi{
+    background: var(--bg-surface);
+    padding: 20px 22px;
+  }
+  .kpi .v{
+    font-family: 'Fraunces', serif;
+    font-size: 26px;
+    font-weight: 600;
+  }
+  .kpi .l{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin-top: 4px;
+  }
+
+  /* ---------- AXES ---------- */
+  .section-title{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin: 44px 0 16px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .section-title::after{
+    content:""; flex:1; height:1px; background: var(--line);
+  }
+  .axes{ display: grid; gap: 10px; }
+  .axis-row{
+    display: grid;
+    grid-template-columns: 230px 1fr 50px;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 18px;
+    background: var(--bg-surface);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+  }
+  .axis-name{ font-size: 13.5px; font-weight: 500; display:flex; align-items:center; gap:9px; }
+  .dot{ width: 9px; height: 9px; border-radius: 50%; flex-shrink:0; }
+  .track{ height: 7px; background: var(--bg-surface-2); border-radius: 4px; overflow: hidden; }
+  .fill{ height: 100%; border-radius: 4px; transition: width 0.8s cubic-bezier(.2,.8,.2,1); }
+  .axis-pct{ font-family: 'IBM Plex Mono', monospace; font-size: 13px; text-align: right; color: var(--text-muted); }
+
+  /* ---------- FILTERS ---------- */
+  .filters{ display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+  .chip{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    padding: 7px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .chip:hover{ border-color: var(--brass); color: var(--text); }
+  .chip.active{ background: var(--brass); border-color: var(--brass); color: #1a1408; font-weight: 600; }
+
+  /* ---------- PROJECT LIST ---------- */
+  .projects{ display: grid; gap: 10px; margin-top: 18px; }
+  .proj{
+    background: var(--bg-surface);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--steel);
+    border-radius: 4px;
+    padding: 18px 20px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 16px;
+    align-items: start;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+  }
+  .proj:hover{ transform: translateX(2px); border-left-color: var(--brass); }
+  .proj-eje{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin-bottom: 5px;
+  }
+  .proj-name{ font-size: 15px; font-weight: 500; margin-bottom: 8px; }
+  .proj-meta{ font-size: 12.5px; color: var(--text-muted); display: flex; gap: 18px; flex-wrap: wrap; }
+  .proj-meta b{ color: var(--text); font-weight: 500; }
+  .proj-right{ text-align: right; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; min-width: 140px; }
+  .badge{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .badge.curso{ background: rgba(111,163,126,0.15); color: var(--ok); border: 1px solid rgba(111,163,126,0.35); }
+  .badge.plan{ background: rgba(147,161,180,0.12); color: var(--text-muted); border: 1px solid var(--line); }
+  .badge.sinresp{ background: rgba(193,102,107,0.12); color: var(--danger); border: 1px solid rgba(193,102,107,0.3); }
+  .countdown{ font-family: 'IBM Plex Mono', monospace; font-size: 12px; }
+  .countdown.urgent{ color: var(--danger); }
+  .countdown.soon{ color: var(--warn); }
+  .countdown.ok{ color: var(--text-muted); }
+  .mini-track{ width: 120px; height: 5px; background: var(--bg-surface-2); border-radius: 3px; overflow: hidden; }
+  .mini-fill{ height: 100%; background: var(--brass); }
+
+  footer{
+    margin-top: 56px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    color: var(--text-faint);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  @media (max-width: 720px){
+    header{ grid-template-columns: 1fr; }
+    .seal{ margin: 0 auto; }
+    .kpis{ grid-template-columns: repeat(2,1fr); }
+    .axis-row{ grid-template-columns: 1fr; gap: 8px; }
+    .axis-pct{ text-align: left; }
+    .proj{ grid-template-columns: 1fr; }
+    .proj-right{ align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <svg class="guilloche" viewBox="0 0 400 200" preserveAspectRatio="none">
+      <defs>
+        <pattern id="g" width="20" height="20" patternUnits="userSpaceOnUse">
+          <circle cx="10" cy="10" r="9" fill="none" stroke="#C9A227" stroke-width="0.4"/>
+        </pattern>
+      </defs>
+      <rect width="400" height="200" fill="url(#g)"/>
+    </svg>
+    <div>
+      <div class="eyebrow">Tesorería Adjunta · GCBA</div>
+      <h1>Panel de Seguimiento — Tesorería 2035</h1>
+      <p>Matriz de proyectos estratégicos, del relevamiento inicial a la infraestructura de confianza. 5 ejes, 4 niveles de madurez, 15 proyectos en curso.</p>
+    </div>
+    <div class="seal">
+      <div class="num" id="sealPct">22%</div>
+      <div class="lbl">Avance<br>general 2026</div>
+    </div>
+  </header>
+
+  <div class="alert">
+    <span class="tag">Atención</span>
+    <span class="msg" id="alertMsg">15 de 15 proyectos figuran sin responsable asignado en la hoja de seguimiento. Definir dueño por proyecto antes de avanzar a la próxima revisión.</span>
+  </div>
+
+  <div style="margin-top:10px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--text-faint); display:flex; align-items:center; gap:8px;">
+    <span id="sourceDot" style="width:7px;height:7px;border-radius:50%;background:var(--text-faint);display:inline-block;"></span>
+    <span id="sourceLbl">Cargando datos…</span>
+  </div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="v">15</div><div class="l">Proyectos totales</div></div>
+    <div class="kpi"><div class="v" style="color:var(--ok)">9</div><div class="l">En curso</div></div>
+    <div class="kpi"><div class="v" style="color:var(--text-muted)">6</div><div class="l">Planificados</div></div>
+    <div class="kpi"><div class="v" id="urgentKpi" style="color:var(--warn)">—</div><div class="l">Hitos &lt; 60 días</div></div>
+  </div>
+
+  <div class="section-title">Avance por eje estratégico</div>
+  <div class="axes" id="axesWrap"></div>
+
+  <div class="section-title">Proyectos — ordenados por proximidad del próximo hito</div>
+  <div class="filters" id="filterEje"></div>
+  <div class="filters" id="filterEstado" style="margin-top:0;"></div>
+  <div class="projects" id="projList"></div>
+
+  <footer>
+    <span>Matriz de Proyectos Estratégicos — Tesorería 2026–2035</span>
+    <span id="todayLbl"></span>
+  </footer>
+</div>
+
+<script>
+const AXES = [
+  { key:"Tecnología y Automatización", color:"var(--steel)", pct:23 },
+  { key:"Analítica e Inteligencia Financiera", color:"var(--teal)", pct:27 },
+  { key:"Servicios y Experiencia de Usuario", color:"var(--brass)", pct:30 },
+  { key:"Personas, Liderazgo y Cultura", color:"var(--clay)", pct:17 },
+  { key:"Gestión Estratégica y Gobernanza", color:"var(--plum)", pct:15 },
+];
+
+const PROJECTS = [
+  {eje:"Tecnología y Automatización", nombre:"Programación y automatización de pagos", nivel:"Nivel 1", entregable:"SIGAF inicial + piloto proveedores", estado:"En curso", avance:35, hito:"Validar módulo y universo piloto", fecha:"2026-08-31", color:"var(--steel)"},
+  {eje:"Tecnología y Automatización", nombre:"Conciliaciones y antifraude", nivel:"Nivel 1", entregable:"Relevar brechas + reglas iniciales", estado:"En curso", avance:25, hito:"Definir reglas y alertas base", fecha:"2026-09-30", color:"var(--steel)"},
+  {eje:"Tecnología y Automatización", nombre:"FUCO y reingeniería de cuentas", nivel:"Nivel 1", entregable:"Inventario y clasificación de cuentas", estado:"Planificado", avance:10, hito:"Completar relevamiento de cuentas", fecha:"2026-10-31", color:"var(--steel)"},
+  {eje:"Analítica e Inteligencia Financiera", nombre:"Cashflow y liquidez", nivel:"Nivel 1", entregable:"Modelo fortalecido e integrado", estado:"En curso", avance:45, hito:"Validar modelo de caja", fecha:"2026-08-15", color:"var(--teal)"},
+  {eje:"Analítica e Inteligencia Financiera", nombre:"Tableros de gestión", nivel:"Nivel 1", entregable:"Diseño de tableros e indicadores", estado:"En curso", avance:30, hito:"Priorizar tablero de pagos", fecha:"2026-09-15", color:"var(--teal)"},
+  {eje:"Analítica e Inteligencia Financiera", nombre:"Información para FUCO", nivel:"Nivel 1", entregable:"Saldos, movimientos y restricciones", estado:"Planificado", avance:5, hito:"Definir fuentes y datos maestros", fecha:"2026-11-30", color:"var(--teal)"},
+  {eje:"Servicios y Experiencia de Usuario", nombre:"Tracking de pagos", nivel:"Nivel 1", entregable:"Estados, vencimientos y criticidad", estado:"En curso", avance:40, hito:"Definir estados y semáforo", fecha:"2026-08-31", color:"var(--brass)"},
+  {eje:"Servicios y Experiencia de Usuario", nombre:"Devoluciones", nivel:"Nivel 1", entregable:"Mapeo de etapas y tiempos", estado:"En curso", avance:20, hito:"Validar circuito punta a punta", fecha:"2026-09-30", color:"var(--brass)"},
+  {eje:"Servicios y Experiencia de Usuario", nombre:"Medios de pago y recaudación", nivel:"Nivel 1", entregable:"Mapeo de canales e incidencias", estado:"En curso", avance:30, hito:"Consolidar fuentes de información", fecha:"2026-10-15", color:"var(--brass)"},
+  {eje:"Personas, Liderazgo y Cultura", nombre:"Documentación del conocimiento", nivel:"Nivel 1", entregable:"Relevamiento y procesos críticos", estado:"En curso", avance:25, hito:"Seleccionar procesos piloto", fecha:"2026-08-31", color:"var(--clay)"},
+  {eje:"Personas, Liderazgo y Cultura", nombre:"Desarrollo de capacidades", nivel:"Nivel 1", entregable:"Capacitaciones iniciales", estado:"Planificado", avance:15, hito:"Definir plan de capacitación", fecha:"2026-09-30", color:"var(--clay)"},
+  {eje:"Personas, Liderazgo y Cultura", nombre:"Adopción y trabajo transversal", nivel:"Nivel 1", entregable:"Referentes y comunicación", estado:"Planificado", avance:10, hito:"Designar referentes por proyecto", fecha:"2026-08-15", color:"var(--clay)"},
+  {eje:"Gestión Estratégica y Gobernanza", nombre:"Gestión por procesos", nivel:"Nivel 1", entregable:"Circuitos, responsables y controles", estado:"En curso", avance:30, hito:"Definir alcance del nuevo manual", fecha:"2026-08-31", color:"var(--plum)"},
+  {eje:"Gestión Estratégica y Gobernanza", nombre:"Riesgos y seguridad", nivel:"Nivel 1", entregable:"Diagnóstico y riesgos críticos", estado:"Planificado", avance:10, hito:"Construir matriz inicial", fecha:"2026-10-31", color:"var(--plum)"},
+  {eje:"Gestión Estratégica y Gobernanza", nombre:"Gobernanza FUCO", nivel:"Nivel 1", entregable:"Actores, normativa y modelo preliminar", estado:"Planificado", avance:5, hito:"Definir mesa de trabajo FUCO", fecha:"2026-09-15", color:"var(--plum)"},
+];
+
+// ============================================================
+// CONEXIÓN CON GOOGLE SHEETS (hoja "Seguimiento" publicada en CSV)
+// Si el fetch falla (sin internet, hoja despublicada, etc.)
+// el tablero cae automáticamente a los datos fijos de más arriba.
+// ============================================================
+const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR5jtwFN5ABDSFDUgaKWWpjub9ouzsMGAmHHoKR0_zG7411o7Qc2q5B4ullOOtSUzaVWTVvkZFqRRdC/pub?gid=1402334184&single=true&output=csv";
+
+const today = new Date();
+today.setHours(0,0,0,0);
+
+function daysUntil(dateStr){
+  const d = new Date(dateStr + "T00:00:00");
+  return Math.round((d - today) / 86400000);
+}
+function fmtDate(dateStr){
+  const d = new Date(dateStr + "T00:00:00");
+  return d.toLocaleDateString('es-AR', { day:'2-digit', month:'short', year:'numeric' });
+}
+function countdownClass(days){
+  if(days < 0) return "urgent";
+  if(days <= 30) return "urgent";
+  if(days <= 60) return "soon";
+  return "ok";
+}
+function countdownLabel(days){
+  if(days < 0) return `Vencido hace ${Math.abs(days)} días`;
+  if(days === 0) return "Vence hoy";
+  return `${days} días`;
+}
+
+// ---------- Convierte fecha DD/MM/YYYY -> YYYY-MM-DD ----------
+function parseSheetDate(str){
+  if(!str) return null;
+  const m = str.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if(!m) return null;
+  return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+}
+
+function colorForEje(eje){
+  const found = AXES.find(a => a.key.trim().toLowerCase() === (eje||'').trim().toLowerCase());
+  return found ? found.color : "var(--steel)";
+}
+
+// ---------- Mapea filas del CSV de la hoja "Seguimiento" a proyectos ----------
+function rowsToProjects(rows){
+  return rows
+    .filter(r => r["Proyecto estratégico"] && r["Proyecto estratégico"].trim())
+    .map(r => ({
+      eje: (r["Eje"] || "").trim(),
+      nombre: (r["Proyecto estratégico"] || "").trim(),
+      nivel: (r["Nivel objetivo actual"] || "").trim(),
+      entregable: (r["Entregable 2026"] || "").trim(),
+      estado: (r["Estado"] || "").trim() || "Planificado",
+      avance: parseInt((r["Avance %"] || "0").replace('%','').trim(), 10) || 0,
+      responsable: (r["Responsable"] || "").trim(),
+      hito: (r["Próximo hito"] || "").trim(),
+      fecha: parseSheetDate(r["Fecha objetivo"]) || "2026-12-31",
+      color: colorForEje(r["Eje"])
+    }));
+}
+
+function computeAxes(projects){
+  return AXES.map(a => {
+    const items = projects.filter(p => p.eje.trim().toLowerCase() === a.key.trim().toLowerCase());
+    const pct = items.length ? Math.round(items.reduce((s,p) => s + p.avance, 0) / items.length) : a.pct;
+    return { ...a, pct };
+  });
+}
+
+function renderAll(projects, source){
+  const axes = computeAxes(projects);
+  const total = projects.length ? Math.round(projects.reduce((s,p)=>s+p.avance,0) / projects.length) : 0;
+  const sinResp = projects.filter(p => !p.responsable).length;
+  const enCurso = projects.filter(p => p.estado === "En curso").length;
+  const planificado = projects.length - enCurso;
+
+  document.getElementById('sealPct').textContent = total + "%";
+  document.getElementById('urgentKpi').textContent = projects.filter(p => daysUntil(p.fecha) <= 60).length;
+  document.getElementById('todayLbl').textContent = "Actualizado al " + today.toLocaleDateString('es-AR', {day:'2-digit', month:'long', year:'numeric'});
+
+  document.querySelectorAll('.kpi .v')[0].textContent = projects.length;
+  document.querySelectorAll('.kpi .v')[1].textContent = enCurso;
+  document.querySelectorAll('.kpi .v')[2].textContent = planificado;
+
+  if(sinResp > 0){
+    document.getElementById('alertMsg').textContent = `${sinResp} de ${projects.length} proyectos figuran sin responsable asignado en la hoja de seguimiento. Definir dueño por proyecto antes de avanzar a la próxima revisión.`;
+  } else {
+    document.querySelector('.alert').style.display = 'none';
+  }
+
+  const sourceDot = document.getElementById('sourceDot');
+  const sourceLbl = document.getElementById('sourceLbl');
+  if(source === 'live'){
+    sourceDot.style.background = 'var(--ok)';
+    sourceLbl.textContent = 'Conectado en vivo a Google Sheets · hoja "Seguimiento"';
+  } else {
+    sourceDot.style.background = 'var(--warn)';
+    sourceLbl.textContent = 'Sin conexión a Sheets — mostrando datos fijos embebidos en el archivo';
+  }
+
+  // Render axes
+  const axesWrap = document.getElementById('axesWrap');
+  axesWrap.innerHTML = '';
+  axes.forEach(a => {
+    const row = document.createElement('div');
+    row.className = 'axis-row';
+    row.innerHTML = `
+      <div class="axis-name"><span class="dot" style="background:${a.color}"></span>${a.key}</div>
+      <div class="track"><div class="fill" style="width:${a.pct}%; background:${a.color}"></div></div>
+      <div class="axis-pct">${a.pct}%</div>
+    `;
+    axesWrap.appendChild(row);
+  });
+
+  renderFilters(projects);
+  renderProjects(projects);
+}
+
+// Filters state
+let activeEje = "Todos";
+let activeEstado = "Todos";
+let currentProjects = PROJECTS;
+
+function renderFilters(projects){
+  currentProjects = projects;
+  const ejes = ["Todos", ...new Set(projects.map(p => p.eje))];
+  const estados = ["Todos", "En curso", "Planificado"];
+
+  const fe = document.getElementById('filterEje');
+  fe.innerHTML = '';
+  ejes.forEach(e => {
+    const b = document.createElement('button');
+    b.className = 'chip' + (e === activeEje ? ' active' : '');
+    b.textContent = e;
+    b.onclick = () => { activeEje = e; renderFilters(currentProjects); renderProjects(currentProjects); };
+    fe.appendChild(b);
+  });
+  const fs = document.getElementById('filterEstado');
+  fs.innerHTML = '';
+  estados.forEach(e => {
+    const b = document.createElement('button');
+    b.className = 'chip' + (e === activeEstado ? ' active' : '');
+    b.textContent = e;
+    b.onclick = () => { activeEstado = e; renderFilters(currentProjects); renderProjects(currentProjects); };
+    fs.appendChild(b);
+  });
+}
+
+function renderProjects(projects){
+  const list = document.getElementById('projList');
+  list.innerHTML = '';
+  let items = projects.filter(p =>
+    (activeEje === "Todos" || p.eje === activeEje) &&
+    (activeEstado === "Todos" || p.estado === activeEstado)
+  );
+  items.sort((a,b) => daysUntil(a.fecha) - daysUntil(b.fecha));
+
+  items.forEach(p => {
+    const days = daysUntil(p.fecha);
+    const cls = countdownClass(days);
+    const card = document.createElement('div');
+    card.className = 'proj';
+    card.style.borderLeftColor = p.color;
+    const respBadge = p.responsable
+      ? `<span class="badge plan" style="color:var(--text); border-color:var(--line);">${p.responsable}</span>`
+      : `<span class="badge sinresp">Sin responsable</span>`;
+    card.innerHTML = `
+      <div>
+        <div class="proj-eje">${p.eje}</div>
+        <div class="proj-name">${p.nombre}</div>
+        <div class="proj-meta">
+          <span><b>Entregable 2026:</b> ${p.entregable}</span>
+          <span><b>Próximo hito:</b> ${p.hito}</span>
+        </div>
+      </div>
+      <div class="proj-right">
+        <span class="badge ${p.estado === 'En curso' ? 'curso' : 'plan'}">${p.estado}</span>
+        ${respBadge}
+        <div class="countdown ${cls}">${countdownLabel(days)} · ${fmtDate(p.fecha)}</div>
+        <div class="mini-track"><div class="mini-fill" style="width:${p.avance}%"></div></div>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+}
+
+// ---------- Arranque: intenta traer datos en vivo de Sheets ----------
+async function init(){
+  if(SHEET_CSV_URL){
+    try{
+      const res = await fetch(SHEET_CSV_URL, { cache: "no-store" });
+      if(!res.ok) throw new Error("HTTP " + res.status);
+      const csvText = await res.text();
+      const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+      const projects = rowsToProjects(parsed.data);
+      if(projects.length === 0) throw new Error("Sin filas válidas");
+      renderAll(projects, 'live');
+      return;
+    } catch(err){
+      console.warn("No se pudo conectar con Google Sheets, usando datos fijos:", err);
+    }
+  }
+  renderAll(PROJECTS, 'static');
+}
+
+init();
+</script>
+</body>
+</html>
