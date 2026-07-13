@@ -354,11 +354,6 @@ const PROJECTS = [
   {eje:"Gestión Estratégica y Gobernanza", nombre:"Gobernanza FUCO", nivel:"Nivel 1", entregable:"Actores, normativa y modelo preliminar", estado:"Planificado", avance:5, hito:"Definir mesa de trabajo FUCO", fecha:"2026-09-15", color:"var(--plum)"},
 ];
 
-// ============================================================
-// CONEXIÓN CON GOOGLE SHEETS (hoja "Seguimiento" publicada en CSV)
-// Si el fetch falla (sin internet, hoja despublicada, etc.)
-// el tablero cae automáticamente a los datos fijos de más arriba.
-// ============================================================
 const SHEET_CSV_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR5jtwFN5ABDSFDUgaKWWpjub9ouzsMGAmHHoKR0_zG7411o7Qc2q5B4ullOOtSUzaVWTVvkZFqRRdC/pub?gid=1402334184&single=true&output=csv";
 
 const today = new Date();
@@ -384,10 +379,10 @@ function countdownLabel(days){
   return `${days} días`;
 }
 
-// ---------- Convierte fecha DD/MM/YYYY -> YYYY-MM-DD ----------
 function parseSheetDate(str){
   if(!str) return null;
-  const m = str.trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  str = str.trim();
+  const m = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if(!m) return null;
   return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
 }
@@ -397,25 +392,18 @@ function colorForEje(eje){
   return found ? found.color : "var(--steel)";
 }
 
-// ---------- Mapea filas del CSV de la hoja "Seguimiento" a proyectos ----------
-// Adaptado para la estructura actual de tu Sheets
+// Mapea filas del CSV con los campos exactos del Sheets
 function rowsToProjects(rows){
   return rows
     .filter(r => r["Proyecto estratégico"] && r["Proyecto estratégico"].trim())
     .map(r => {
-      // Detectar estado: si hay valor en la columna "Estado", usarlo; si no, revisar color de fondo
-      let estado = (r["Estado"] || "").trim();
-      if(!estado){
-        // Si no hay estado explícito, asumir estado basado en contexto
-        estado = "Planificado";
-      }
-      
-      // Parsear avance: puede venir como "25%" o "25" o "25 %"
-      let avanceStr = (r["Avance %"] || "0").toString().trim();
-      let avance = parseInt(avanceStr.replace(/[^0-9]/g, ''), 10) || 0;
+      const eje = (r["Eje"] || "").trim();
+      const avanceStr = (r["Avance %"] || "0").toString().trim();
+      const avance = parseInt(avanceStr.replace(/[^0-9]/g, ''), 10) || 0;
+      const estado = (r["Estado"] || "Planificado").trim();
       
       return {
-        eje: (r["Eje"] || "").trim(),
+        eje: eje,
         nombre: (r["Proyecto estratégico"] || "").trim(),
         nivel: (r["Nivel objetivo actual"] || "").trim(),
         entregable: (r["Entregable 2026"] || "").trim(),
@@ -424,7 +412,7 @@ function rowsToProjects(rows){
         responsable: (r["Responsable"] || "").trim(),
         hito: (r["Próximo hito"] || "").trim(),
         fecha: parseSheetDate(r["Fecha objetivo"]) || "2026-12-31",
-        color: colorForEje(r["Eje"])
+        color: colorForEje(eje)
       };
     });
 }
@@ -468,7 +456,6 @@ function renderAll(projects, source){
     sourceLbl.textContent = 'Sin conexión a Sheets — mostrando datos fijos embebidos en el archivo';
   }
 
-  // Render axes
   const axesWrap = document.getElementById('axesWrap');
   axesWrap.innerHTML = '';
   axes.forEach(a => {
@@ -486,14 +473,13 @@ function renderAll(projects, source){
   renderProjects(projects);
 }
 
-// Filters state
 let activeEje = "Todos";
 let activeEstado = "Todos";
 let currentProjects = PROJECTS;
 
 function renderFilters(projects){
   currentProjects = projects;
-  const ejes = ["Todos", ...new Set(projects.map(p => p.eje))];
+  const ejes = ["Todos", ...new Set(projects.map(p => p.eje).filter(e => e))];
   const estados = ["Todos", "En curso", "Planificado"];
 
   const fe = document.getElementById('filterEje');
@@ -554,7 +540,6 @@ function renderProjects(projects){
   });
 }
 
-// ---------- Arranque: intenta traer datos en vivo de Sheets ----------
 async function init(){
   if(SHEET_CSV_URL){
     try{
@@ -562,12 +547,14 @@ async function init(){
       if(!res.ok) throw new Error("HTTP " + res.status);
       const csvText = await res.text();
       const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+      console.log("Primeras filas del CSV:", parsed.data.slice(0, 2));
       const projects = rowsToProjects(parsed.data);
+      console.log("Proyectos parseados:", projects.length, projects);
       if(projects.length === 0) throw new Error("Sin filas válidas");
       renderAll(projects, 'live');
       return;
     } catch(err){
-      console.warn("No se pudo conectar con Google Sheets, usando datos fijos:", err);
+      console.error("Error al conectar con Sheets:", err);
     }
   }
   renderAll(PROJECTS, 'static');
