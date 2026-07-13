@@ -398,21 +398,35 @@ function colorForEje(eje){
 }
 
 // ---------- Mapea filas del CSV de la hoja "Seguimiento" a proyectos ----------
+// Adaptado para la estructura actual de tu Sheets
 function rowsToProjects(rows){
   return rows
     .filter(r => r["Proyecto estratégico"] && r["Proyecto estratégico"].trim())
-    .map(r => ({
-      eje: (r["Eje"] || "").trim(),
-      nombre: (r["Proyecto estratégico"] || "").trim(),
-      nivel: (r["Nivel objetivo actual"] || "").trim(),
-      entregable: (r["Entregable 2026"] || "").trim(),
-      estado: (r["Estado"] || "").trim() || "Planificado",
-      avance: parseInt((r["Avance %"] || "0").replace('%','').trim(), 10) || 0,
-      responsable: (r["Responsable"] || "").trim(),
-      hito: (r["Próximo hito"] || "").trim(),
-      fecha: parseSheetDate(r["Fecha objetivo"]) || "2026-12-31",
-      color: colorForEje(r["Eje"])
-    }));
+    .map(r => {
+      // Detectar estado: si hay valor en la columna "Estado", usarlo; si no, revisar color de fondo
+      let estado = (r["Estado"] || "").trim();
+      if(!estado){
+        // Si no hay estado explícito, asumir estado basado en contexto
+        estado = "Planificado";
+      }
+      
+      // Parsear avance: puede venir como "25%" o "25" o "25 %"
+      let avanceStr = (r["Avance %"] || "0").toString().trim();
+      let avance = parseInt(avanceStr.replace(/[^0-9]/g, ''), 10) || 0;
+      
+      return {
+        eje: (r["Eje"] || "").trim(),
+        nombre: (r["Proyecto estratégico"] || "").trim(),
+        nivel: (r["Nivel objetivo actual"] || "").trim(),
+        entregable: (r["Entregable 2026"] || "").trim(),
+        estado: estado,
+        avance: avance,
+        responsable: (r["Responsable"] || "").trim(),
+        hito: (r["Próximo hito"] || "").trim(),
+        fecha: parseSheetDate(r["Fecha objetivo"]) || "2026-12-31",
+        color: colorForEje(r["Eje"])
+      };
+    });
 }
 
 function computeAxes(projects){
