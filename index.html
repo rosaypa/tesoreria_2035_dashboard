@@ -160,6 +160,17 @@
     gap: 12px;
     font-size: 13.5px;
   }
+  #sourceLbl{
+    color: var(--text-faint);
+    text-decoration: none;
+    transition: color 0.15s ease;
+  }
+  
+  #sourceLbl:hover{
+    color: var(--steel);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
   .alert .tag{
     font-family: 'IBM Plex Mono', monospace;
     font-size: 10px;
@@ -413,7 +424,14 @@
 
   <div style="margin-top:10px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--text-faint); display:flex; align-items:center; gap:8px;">
     <span id="sourceDot" style="width:7px;height:7px;border-radius:50%;background:var(--text-faint);display:inline-block;"></span>
-    <span id="sourceLbl">Cargando datos…</span>
+    <a
+      id="sourceLbl"
+      href="https://docs.google.com/spreadsheets/d/1keEceO1rT9LWGHtd-i0b4rXOXzShT42tNs9MAxt3oA0/edit?usp=sharing"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      Cargando datos…
+    </a>
   </div>
 
   <div class="kpis">
